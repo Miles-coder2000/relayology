@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+{% extends 'base.html' %}
+{% block content %}
+<div class="message-box">
+  <h2>Chat Room: {{ code }}</h2>
+  <div class="users">
+    <h3>Online Guests:</h3>
+    <ul id="online-users"></ul>
+    <h3>Offline Guests:</h3>
+    <ul id="offline-users"></ul>
+  </div>
+  <div class="messages" id="messages"></div>
+  <div class="inputs">
+    <input
+      type="text"
+      rows="3"
+      placeholder="Message"
+      name="message"
+      id="message"
+    />
+    <button type="button" name="send" id="send-btn" onClick="sendMessage()">
+      Send
+    </button>
+  </div>
+</div>
+<script type="text/javascript">
+  var socketio = io();
+
+  const messages = document.getElementById("messages");
+  const onlineUsersList = document.getElementById("online-users");
+  const offlineUsersList = document.getElementById("offline-users");
+
+  const createMessage = (name, msg) => {
+    const content = `
+    <div class="text">
+        <span>
+            <strong>${name}</strong>: ${msg}
+        </span>
+        <span class="muted">
+            ${new Date().toLocaleString()}
+        </span>
+    </div>
+    `;
+    messages.innerHTML += content;
+  };
+
+  const updateUserList = (onlineUsers, offlineUsers) => {
+    onlineUsersList.innerHTML = "";
+    offlineUsersList.innerHTML = "";
+
+    onlineUsers.forEach((user) => {
+      const listItem = document.createElement("li");
+      listItem.textContent = user;
+      onlineUsersList.appendChild(listItem);
+    });
+
+    offlineUsers.forEach((user) => {
+      const listItem = document.createElement("li");
+      listItem.textContent = user;
+      offlineUsersList.appendChild(listItem);
+    });
+  };
+
+  socketio.on("message", (data) => {
+    createMessage(data.name, data.message);
+  });
+
+  socketio.on("user_list", (data) => {
+    updateUserList(data.online, data.offline);
+  });
+
+  const sendMessage = () => {
+    const message = document.getElementById("message");
+    if (message.value == "") return;
+    socketio.emit("message", { data: message.value });
+    message.value = "";
+  };
+</script>
+{% for msg in messages %}
+<script type="text/javascript">
+  createMessage("{{ msg.name }}", "{{ msg.message }}");
+</script>
+{% endfor %}
+{% endblock %}
